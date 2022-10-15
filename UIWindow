@@ -1,40 +1,124 @@
-package application;
+package com.example.textanalyzer;
 
-import javafx.application.Application;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.layout.StackPane;
-import javafx.stage.Stage;
-import javafx.application.Application;
-import javafx.scene.Scene;
-import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 
+import java.io.IOException;
 
-public class Main extends Application {
-	
-	Button button;
-	
-	@Override
-	public void start(Stage primaryStage) {
-		try {
-			BorderPane root = new BorderPane();
-			Scene scene = new Scene(root,400,400);
-			scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
-			primaryStage.setScene(scene);
-			primaryStage.show();
-			primaryStage.setTitle("Word Analyzer");
-			
-			button = new Button("Click Me");
-			
-		} catch(Exception e) {
-			e.printStackTrace();
-		}
-	}
-	
-	public static void main(String[] args) {
-		launch(args);
-	}
+public class Application extends javafx.application.Application {
+    @Override
+    public void start(Stage stage) throws IOException {
+        FXMLLoader fxmlLoader = new FXMLLoader(Application.class.getResource("main.fxml"));
+        Scene scene = new Scene(fxmlLoader.load(), 550, 550);
+        stage.setTitle("Main!");
+        stage.setScene(scene);
+        stage.show();
+    }
+
+    public static void main(String[] args) {
+        launch();
+    }
 }
+
+
+package com.example.textanalyzer;
+
+import javafx.fxml.FXML;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
+
+import java.io.*;
+import java.net.URISyntaxException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
+
+public class Controller {
+    @FXML
+    private Label welcomeText;
+
+    @FXML
+    private TextArea outputText;
+    @FXML
+    private TextField rangeTextField;
+
+    @FXML
+    private Button searchBtn;
+
+    @FXML
+    protected void onSearchBtnClick(){
+        int range = Integer.valueOf(rangeTextField.getText());
+        try {
+            String result = analyzeTexts(range,"words.txt");
+            outputText.setText(result);
+        }catch (Exception e){
+            System.out.println("error : " + e);
+        }
+    }
+
+    public String analyzeTexts(int range,String fileName) throws IOException, URISyntaxException {
+
+        String result = "";
+
+        FileReader fileReader = new FileReader(new File(getClass().getClassLoader().getResource(fileName).toURI()));
+        BufferedReader bufferedReader = new BufferedReader(fileReader);
+
+        // creating an empty map used to store word and frequencies of all words
+        Map<String, Integer> wordCounts = new HashMap<>();
+
+        String line;
+
+        while ((line = bufferedReader.readLine()) != null) {
+
+            // splitting line by use regular expression
+            String[] words = line.split("[\\s.;,?:!()\"]+");
+
+            // iterate all words
+            for (String word : words) {
+
+                word = word.trim();
+
+                if (word.length() > 0) {
+
+                    if (wordCounts.containsKey(word)) {
+                        wordCounts.put(word, wordCounts.get(word) + 1);
+                    } else {
+                        wordCounts.put(word, 1);
+                    }
+                }
+            }
+        }
+
+        // sorting wordCounts by frequency
+        Map<String, Integer> sortedWordCounts = wordCounts.entrySet().stream()
+                .sorted(Collections.reverseOrder(Entry.comparingByValue()))
+                .collect(Collectors.toMap(Entry::getKey, Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
+
+        // printing word and frequencies of all words
+//        System.out.printf("%-20s%15s\n", "Word", "Frequency");
+//
+//        System.out.printf("%-20s%15s\n", "====", "=========");
+
+        int count = 0;
+        for (Map.Entry<String, Integer> entry : sortedWordCounts.entrySet()) {
+            result += String.format("%5d - %20s\n", entry.getValue(),entry.getKey());
+            //System.out.printf("%-20s%10s\n", entry.getKey(), entry.getValue());
+            count++;
+            if(count == range){
+                break;
+            }
+        }
+
+        bufferedReader.close();
+
+        return result;
+    }
+
+}
+
